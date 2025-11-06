@@ -1,0 +1,5 @@
+{
+  "name": "Productivity Dashboard",
+  "description": "A lightweight, personalized dashboard to replace your new tab page. It helps you track daily tasks, weekly and monthly goals, and provides quick access to your favorite sites, all synced with Firebase.",
+  "requestFramePermissions": []
+}
