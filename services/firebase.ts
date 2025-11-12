@@ -7,7 +7,8 @@ import {
   GoogleAuthProvider, 
   signOut,
   onAuthStateChanged,
-  User
+  User,
+  UserCredential
 } from 'firebase/auth';
 import { 
   getFirestore,
@@ -22,20 +23,20 @@ import {
   orderBy
 } from 'firebase/firestore';
 
-// IMPORTANT: Replace with your own Firebase project configuration
-// Firebase configuration
+// Firebase configuration from environment variables
+// These are loaded from .env.local (not committed to git)
 const firebaseConfig = {
-  apiKey: "AIzaSyCCTZP4xkhilSmrLgMTDB5BP-XZy3lq25U",
-  authDomain: "perfect-productivity-d0272.firebaseapp.com",
-  projectId: "perfect-productivity-d0272",
-  storageBucket: "perfect-productivity-d0272.firebasestorage.app",
-  messagingSenderId: "963675946258",
-  appId: "1:963675946258:web:648aedbf80ead9c4e1c7cb",
-  measurementId: "G-7NYTG3HRL8"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "",
 };
 
 
-export const isFirebaseConfigured = firebaseConfig.apiKey !== "YOUR_API_KEY" && !!firebaseConfig.apiKey;
+export const isFirebaseConfigured = firebaseConfig.apiKey && firebaseConfig.apiKey !== "" && firebaseConfig.apiKey !== "YOUR_API_KEY";
 
 let app;
 let auth;
@@ -47,13 +48,15 @@ if (isFirebaseConfigured) {
   auth = getAuth(app);
   db = getFirestore(app);
   provider = new GoogleAuthProvider();
+  // Request access to the user's calendar
+  provider.addScope('https://www.googleapis.com/auth/calendar.events.readonly');
 } else {
   console.warn("Firebase is not configured. Please add your Firebase project configuration to services/firebase.ts. The app will display a setup guide.");
 }
 
 const unconfiguredError = () => Promise.reject(new Error("Firebase is not configured. Please add your Firebase project configuration to services/firebase.ts"));
 
-export const signInWithGoogle = () => {
+export const signInWithGoogle = (): Promise<UserCredential> => {
   if (!isFirebaseConfigured || !auth || !provider) return unconfiguredError();
   return signInWithPopup(auth, provider);
 };
@@ -99,4 +102,4 @@ export const deleteDocument = async (userId: string, collectionName: string, doc
   return deleteDoc(docRef);
 };
 
-export { auth, db };
+export { auth, db, GoogleAuthProvider };

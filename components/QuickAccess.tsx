@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { QuickAccessLink } from '../types';
 import { EditIcon, DeleteIcon, AddIcon } from './icons';
@@ -6,7 +5,7 @@ import { EditIcon, DeleteIcon, AddIcon } from './icons';
 interface QuickAccessProps {
   links: QuickAccessLink[];
   onAddLink: (name: string, url: string) => void;
-  onDeleteLink: (id: string) => void;
+  onDeleteLink: (id: number) => void;
 }
 
 const QuickAccess: React.FC<QuickAccessProps> = ({ links, onAddLink, onDeleteLink }) => {

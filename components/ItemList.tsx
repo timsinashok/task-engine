@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Item } from '../types';
 import { DeleteIcon, AddIcon } from './icons';
@@ -8,8 +7,8 @@ interface ItemListProps {
   items: Item[];
   placeholder: string;
   onAddItem: (text: string) => void;
-  onToggleItem: (id: string, completed: boolean) => void;
-  onDeleteItem: (id: string) => void;
+  onToggleItem: (id: number, completed: boolean) => void;
+  onDeleteItem: (id: number) => void;
 }
 
 const ItemList: React.FC<ItemListProps> = ({ title, items, placeholder, onAddItem, onToggleItem, onDeleteItem }) => {

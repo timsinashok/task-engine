@@ -1,95 +1,148 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
-import { User, Item, QuickAccessLink, CalendarEvent } from '../types';
+import { Item, QuickAccessLink, CalendarEvent } from '../types';
 import Header from './Header';
 import Timeline from './Timeline';
 import QuickAccess from './QuickAccess';
 import ItemList from './ItemList';
-import * as firebase from '../services/firebase';
+import * as localDB from '../services/localDB';
+import { fetchGoogleCalendarEvents } from '../services/googleCalendar';
+import { User } from 'firebase/auth';
 
 interface DashboardProps {
   user: User;
+  onLogout: () => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ user }) => {
+const Dashboard: React.FC<DashboardProps> = ({ user, onLogout }) => {
   const [tasks, setTasks] = useState<Item[]>([]);
   const [weeklyGoals, setWeeklyGoals] = useState<Item[]>([]);
   const [monthlyGoals, setMonthlyGoals] = useState<Item[]>([]);
   const [quickAccessLinks, setQuickAccessLinks] = useState<QuickAccessLink[]>([]);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const [calendarError, setCalendarError] = useState<string | null>(null);
 
-  const fetchCollection = useCallback(async <T,>(collectionName: string, setter: React.Dispatch<React.SetStateAction<T[]>>) => {
+  const fetchCollection = useCallback(async (collectionName: string) => {
     try {
-      const items = await firebase.getCollection<Omit<T, 'id'>>(user.uid, collectionName);
-      setter(items as T[]);
+      const items = await localDB.getCollection(collectionName);
+      switch (collectionName) {
+        case 'tasks':
+          setTasks(items);
+          break;
+        case 'weeklyGoals':
+          setWeeklyGoals(items);
+          break;
+        case 'monthlyGoals':
+          setMonthlyGoals(items);
+          break;
+        case 'quickAccess':
+          setQuickAccessLinks(items);
+          break;
+      }
     } catch (error) {
       console.error(`Error fetching ${collectionName}:`, error);
     }
-  }, [user.uid]);
+  }, []); // setState functions are stable, no need for dependencies
 
+  // Fetch local data on mount
   useEffect(() => {
-    fetchCollection('tasks', setTasks);
-    fetchCollection('weeklyGoals', setWeeklyGoals);
-    fetchCollection('monthlyGoals', setMonthlyGoals);
-    fetchCollection('quickAccess', setQuickAccessLinks);
-    // Mock calendar events as Google Calendar API requires complex OAuth2 setup
-    const today = new Date();
-    setCalendarEvents([
-        { id: '1', summary: 'Team Sync', start: new Date(today.setHours(9, 0, 0)), end: new Date(today.setHours(10, 0, 0)), colorClass: 'bg-blue-500' },
-        { id: '2', summary: 'Review PR', start: new Date(today.setHours(11, 0, 0)), end: new Date(today.setHours(11, 30, 0)), colorClass: 'bg-green-500' },
-        { id: '3', summary: 'Client Meeting', start: new Date(today.setHours(14, 0, 0)), end: new Date(today.setHours(15, 30, 0)), colorClass: 'bg-red-500' },
-        { id: '4', summary: 'Design Mockups', start: new Date(today.setHours(16, 0, 0)), end: new Date(today.setHours(18, 0, 0)), colorClass: 'bg-yellow-400 text-black' },
-    ]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchCollection]);
+    fetchCollection('tasks');
+    fetchCollection('weeklyGoals');
+    fetchCollection('monthlyGoals');
+    fetchCollection('quickAccess');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
+
+  // Fetch calendar events from server (with auto-refresh)
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        setCalendarError(null);
+        console.log('Fetching calendar events from server...');
+        
+        // Import the server fetch function
+        const { fetchCalendarEventsFromServer } = await import('../services/googleCalendar');
+        
+        const events = await fetchCalendarEventsFromServer();
+        console.log('Calendar events fetched successfully:', events.length, 'events');
+        setCalendarEvents(events);
+      } catch (error: any) {
+        console.error("Error fetching calendar events:", error);
+        let errorMessage = error?.message || "Could not load schedule. Please sign out and sign in again.";
+        
+        // Provide more specific guidance
+        if (errorMessage.includes('Calendar access denied') || errorMessage.includes('403') || errorMessage.includes('not been used')) {
+          if (errorMessage.includes('not enabled') || errorMessage.includes('not been used')) {
+            errorMessage = 'Google Calendar API is not enabled. Enable it at: https://console.cloud.google.com/apis/library/calendar-json.googleapis.com?project=perfect-productivity-d0272';
+          } else {
+            errorMessage = 'Calendar access denied. Please: 1) Enable Google Calendar API in Google Cloud Console, 2) Sign out and sign in again, 3) Grant calendar permissions when prompted';
+          }
+        }
+        
+        setCalendarError(errorMessage);
+      }
+    };
+
+    // Fetch immediately on mount
+    fetchEvents();
+
+    // Set up periodic refresh every 5 minutes to get updates from server
+    // (Server refreshes from Google Calendar API every hour)
+    const intervalId = setInterval(() => {
+      console.log('Refreshing calendar events from server...');
+      fetchEvents();
+    }, 5 * 60 * 1000); // 5 minutes
+
+    // Cleanup on unmount
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, []); // Only run once on mount
 
   const handleAddItem = async (collectionName: string, text: string) => {
     if (!text.trim()) return;
     const newItem = { text, completed: false };
-    const docRef = await firebase.addDocument(user.uid, collectionName, newItem);
-    if(docRef) {
-        fetchCollection(collectionName, (setters as any)[collectionName]);
-    }
+    await localDB.addDocument(collectionName, newItem);
+    fetchCollection(collectionName);
   };
 
-  const handleToggleItem = async (collectionName: string, id: string, completed: boolean) => {
-    await firebase.updateDocument(user.uid, collectionName, id, { completed: !completed });
-    fetchCollection(collectionName, (setters as any)[collectionName]);
+  const handleToggleItem = async (collectionName: string, id: number, completed: boolean) => {
+    await localDB.updateDocument(collectionName, id, { completed: !completed });
+    fetchCollection(collectionName);
   };
 
-  const handleDeleteItem = async (collectionName: string, id: string) => {
-    await firebase.deleteDocument(user.uid, collectionName, id);
-    fetchCollection(collectionName, (setters as any)[collectionName]);
+  const handleDeleteItem = async (collectionName: string, id: number) => {
+    await localDB.deleteDocument(collectionName, id);
+    fetchCollection(collectionName);
   };
 
   const handleAddLink = async (name: string, url: string) => {
     if(!name.trim() || !url.trim()) return;
     const newLink = { name, url };
-    await firebase.addDocument(user.uid, 'quickAccess', newLink);
-    fetchCollection('quickAccess', setQuickAccessLinks);
+    await localDB.addDocument('quickAccess', newLink);
+    fetchCollection('quickAccess');
   };
 
-  const handleDeleteLink = async (id: string) => {
-    await firebase.deleteDocument(user.uid, 'quickAccess', id);
-    fetchCollection('quickAccess', setQuickAccessLinks);
+  const handleDeleteLink = async (id: number) => {
+    await localDB.deleteDocument('quickAccess', id);
+    fetchCollection('quickAccess');
   };
-
-  const setters = {
-    tasks: setTasks,
-    weeklyGoals: setWeeklyGoals,
-    monthlyGoals: setMonthlyGoals,
-  };
-
 
   return (
     <div className="container mx-auto p-4 md:p-8 max-w-6xl min-h-screen text-neutral-900 dark:text-neutral-100">
-      <Header user={user} />
+      <Header user={user} onLogout={onLogout} />
       
-      <div className="card-bg rounded-xl p-4 mb-8">
-        <Timeline events={calendarEvents} />
+      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4 mb-8">
+         {calendarError ? (
+            <div className="text-center text-red-500 p-4">
+                <p className="font-semibold">Could not load today's schedule</p>
+                <p className="text-sm">{calendarError}</p>
+            </div>
+        ) : (
+            <Timeline events={calendarEvents} />
+        )}
       </div>
 
-      <div className="card-bg rounded-xl p-4 mb-8">
+      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4 mb-8">
         <QuickAccess links={quickAccessLinks} onAddLink={handleAddLink} onDeleteLink={handleDeleteLink} />
       </div>
       

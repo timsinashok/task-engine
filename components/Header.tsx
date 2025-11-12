@@ -1,14 +1,13 @@
-
 import React, { useState, useEffect } from 'react';
-import { User } from '../types';
-import { signOutUser } from '../services/firebase';
 import { CalendarIcon, MailIcon, LogoutIcon } from './icons';
+import { User } from 'firebase/auth';
 
 interface HeaderProps {
   user: User;
+  onLogout: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ user }) => {
+const Header: React.FC<HeaderProps> = ({ user, onLogout }) => {
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
@@ -33,13 +32,12 @@ const Header: React.FC<HeaderProps> = ({ user }) => {
         <a href="https://mail.google.com" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors" aria-label="Gmail">
           <MailIcon />
         </a>
-        <div className="flex items-center gap-2">
-          <img src={user.photoURL || ''} alt={user.displayName || 'User'} className="w-8 h-8 rounded-full" />
-          <span className="text-sm font-medium hidden md:inline">{user.displayName}</span>
+        <div className="flex items-center gap-3 pl-2 border-l border-neutral-200 dark:border-neutral-700">
+            <img src={user.photoURL || undefined} alt={user.displayName || 'User'} className="w-8 h-8 md:w-10 md:h-10 rounded-full" />
+            <button onClick={onLogout} className="p-2 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors" aria-label="Logout">
+                <LogoutIcon />
+            </button>
         </div>
-        <button onClick={signOutUser} className="p-2 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors" aria-label="Logout">
-          <LogoutIcon />
-        </button>
       </div>
     </header>
   );

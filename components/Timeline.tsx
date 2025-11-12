@@ -40,11 +40,11 @@ const Timeline: React.FC<TimelineProps> = ({ events }) => {
           return (
             <div
               key={event.id}
-              className={`absolute top-0 h-full rounded-md flex items-center justify-center text-white text-xs font-semibold overflow-hidden whitespace-nowrap px-2 ${event.colorClass}`}
+              className={`absolute top-0 h-full rounded-md flex items-center justify-center text-white text-[10px] font-medium overflow-hidden whitespace-nowrap px-1 ${event.colorClass}`}
               style={{ left: `${left}%`, width: `${width}%` }}
               title={`${event.summary} (${event.start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${event.end.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})`}
             >
-              <span className="truncate">{event.summary}</span>
+              <span className="truncate leading-tight">{event.summary}</span>
             </div>
           );
         })}

@@ -1,18 +1,16 @@
 
-import { User as FirebaseUser } from 'firebase/auth';
-
-export type User = FirebaseUser;
-
 export interface Item {
-  id: string;
+  id: number;
   text: string;
   completed: boolean;
+  createdAt?: number;
 }
 
 export interface QuickAccessLink {
-  id: string;
+  id: number;
   name: string;
   url: string;
+  createdAt?: number;
 }
 
 export interface CalendarEvent {
