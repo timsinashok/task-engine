@@ -1,0 +1,19 @@
+{
+  "events": [
+    {
+      "id": "_68pj2e9l68oj2chl710k8c1g64mj2g39dpq74objcliissrkeli6arjkadimopijclp7cqb3ck_20251112T072000Z",
+      "summary": "Water for Life",
+      "start": "2025-11-12T07:20:00.000Z",
+      "end": "2025-11-12T08:35:00.000Z",
+      "colorClass": "bg-green-500"
+    },
+    {
+      "id": "_68o3ae1p6koj2chl710k8c1g64mj2g39dpq74objcliissrkeli6arjkadimopijclp7cqb3ck_20251112T113500Z",
+      "summary": "Operating Systems",
+      "start": "2025-11-12T11:35:00.000Z",
+      "end": "2025-11-12T12:50:00.000Z",
+      "colorClass": "bg-rose-500"
+    }
+  ],
+  "fetchedAt": "2025-11-11T21:11:31.748Z"
+}
